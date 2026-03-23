@@ -25,9 +25,12 @@ public class SecurityConfig {
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/registration/register/**").hasRole("REGISTRANT")
+                        .requestMatchers("/registration/admin/**").hasAnyRole("ADMIN", "ORGANIZER")
                         .requestMatchers("/registration/webhooks/**").permitAll()
                         .requestMatchers("/registration/swagger-ui/**", "/registration/v3/api-docs/**", "/registration/swagger-ui.html").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/error").permitAll()
+                        .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR, jakarta.servlet.DispatcherType.FORWARD).permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -41,7 +44,8 @@ public class SecurityConfig {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
         configuration.setAllowedOrigins(java.util.List.of("*"));
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type", "X-Requested-With"));
+        configuration.setAllowedHeaders(java.util.List.of(
+                "Authorization", "Content-Type", "X-Requested-With", "X-Razorpay-Signature"));
         org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

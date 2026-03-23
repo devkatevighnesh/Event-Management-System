@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Razorpay Payment Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        #status {
+            margin-top: 1rem;
+            padding: 0.5rem;
+            text-align: center;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h2>Razorpay Manual Tester</h2>
+
+        <div class="form-group">
+            <label>Razorpay Key ID</label>
+            <input type="text" id="key-id" value="rzp_test_STBCpYcTFjDI0h" placeholder="rzp_test_..." />
+        </div>
+
+        <div class="form-group">
+            <label>Razorpay Order ID</label>
+            <input type="text" id="order-id" value="" placeholder="order_xyz..." />
+        </div>
+
+        <button onclick="openRazorpay()">Pay with Razorpay</button>
+
+        <div id="status"></div>
+    </div>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        function openRazorpay() {
+            const keyId = document.getElementById('key-id').value.trim();
+            const orderId = document.getElementById('order-id').value.trim();
+            const statusBox = document.getElementById('status');
+
+            if (!keyId || !orderId) {
+                statusBox.className = 'error';
+                statusBox.style.display = 'block';
+                statusBox.innerText = 'Please enter both Key ID and Order ID!';
+                return;
+            }
+
+            const options = {
+                key: keyId,
+                order_id: orderId,
+                name: 'Event Management System',
+                description: 'Manual Payment Test',
+                theme: { color: '#007bff' },
+                handler: function (response) {
+                    // Payment succeeded on Razorpay's end
+                    statusBox.className = 'success';
+                    statusBox.style.display = 'block';
+                    statusBox.innerHTML = `
+                    <strong>Payment Successful!</strong><br/>
+                    Payment ID: ${response.razorpay_payment_id}<br/>
+                    <em>The Webhook should now automatically fire on your backend.</em>
+                `;
+                },
+                modal: {
+                    ondismiss: function () {
+                        statusBox.className = 'error';
+                        statusBox.style.display = 'block';
+                        statusBox.innerText = 'Payment popup was closed.';
+                    }
+                }
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.open();
+        }
+    </script>
+
+</body>
+
+</html>

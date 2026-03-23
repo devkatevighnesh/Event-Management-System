@@ -10,8 +10,9 @@ import java.math.BigDecimal;
 @Builder
 public class RegistrationResponse {
     private Long registrationId;
+    private Long eventId;
     private String ticketNo;
     private String status;
-    private String razorpayOrderId;
+    private String razorpayOrderId;  // returned so frontend knows the orderId after STEP 1 (if applicable)
     private BigDecimal amount;
 }

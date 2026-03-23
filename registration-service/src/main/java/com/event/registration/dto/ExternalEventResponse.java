@@ -13,4 +13,7 @@ public class ExternalEventResponse {
     private String status;
     private Integer maxCapacity;
     private BigDecimal entryFee;
+    private java.time.LocalDateTime eventDate;
+    private String venueName;
+    private String venueCity;
 }
