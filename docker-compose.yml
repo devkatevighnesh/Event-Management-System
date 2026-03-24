@@ -1,0 +1,213 @@
+version: '3.8'
+
+services:
+  # Databases
+  auth-db:
+    image: postgres:15-alpine
+    container_name: auth-db
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5431:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - event-net
+    volumes:
+      - auth-data:/var/lib/postgresql/data
+
+  event-db:
+    image: postgres:15-alpine
+    container_name: event-db
+    environment:
+      POSTGRES_DB: event_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d event_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - event-net
+    volumes:
+      - event-data:/var/lib/postgresql/data
+
+  registration-db:
+    image: postgres:15-alpine
+    container_name: registration-db
+    environment:
+      POSTGRES_DB: registration_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d registration_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - event-net
+    volumes:
+      - registration-data:/var/lib/postgresql/data
+
+  # Infrastructure Services
+  service-registry:
+    build: ./service-registry
+    container_name: service-registry
+    ports:
+      - "8761:8761"
+    networks:
+      - event-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_CLOUD_GATEWAY=TRACE
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_HTTP_SERVER_REACTIVE=DEBUG
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB=DEBUG
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+    depends_on:
+      service-registry:
+        condition: service_healthy
+    networks:
+      - event-net
+
+  # Microservices
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "8081:8081"
+    extra_hosts:
+      - "ep-floral-moon-ad2xk7dc-pooler.c-2.us-east-1.aws.neon.tech:44.198.216.75"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      # Local DB Override:
+      # - SPRING_DATASOURCE_URL=jdbc:postgresql://auth-db:5432/auth_db
+      # - SPRING_DATASOURCE_USERNAME=user
+      # - SPRING_DATASOURCE_PASSWORD=password
+      # Neon DB Override (Active):
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://ep-floral-moon-ad2xk7dc-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require
+      - SPRING_DATASOURCE_USERNAME=neondb_owner
+      - SPRING_DATASOURCE_PASSWORD=npg_VYbw2NX4SZPr
+      - SPRING_DATASOURCE_DRIVER=org.postgresql.Driver
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+    depends_on:
+      service-registry:
+        condition: service_healthy
+      # auth-db:
+      #   condition: service_healthy
+    networks:
+      - event-net
+
+  event-service:
+    build: ./event-service
+    container_name: event-service
+    ports:
+      - "8082:8082"
+    extra_hosts:
+      - "ep-floral-moon-ad2xk7dc-pooler.c-2.us-east-1.aws.neon.tech:44.198.216.75"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      # Local DB Override:
+      # - SPRING_DATASOURCE_URL=jdbc:postgresql://event-db:5432/event_db
+      # - SPRING_DATASOURCE_USERNAME=user
+      # - SPRING_DATASOURCE_PASSWORD=password
+      # Neon DB Override (Active):
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://ep-floral-moon-ad2xk7dc-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require
+      - SPRING_DATASOURCE_USERNAME=neondb_owner
+      - SPRING_DATASOURCE_PASSWORD=npg_VYbw2NX4SZPr
+      - SPRING_DATASOURCE_DRIVER=org.postgresql.Driver
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+    depends_on:
+      service-registry:
+        condition: service_healthy
+      # event-db:
+      #   condition: service_healthy
+    networks:
+      - event-net
+
+  registration-service:
+    build: ./registration-service
+    container_name: registration-service
+    ports:
+      - "8083:8083"
+    extra_hosts:
+      - "ep-floral-moon-ad2xk7dc-pooler.c-2.us-east-1.aws.neon.tech:44.198.216.75"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      # Local DB Override:
+      # - SPRING_DATASOURCE_URL=jdbc:postgresql://registration-db:5432/registration_db
+      # - SPRING_DATASOURCE_USERNAME=user
+      # - SPRING_DATASOURCE_PASSWORD=password
+      # Neon DB Override (Active):
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://ep-floral-moon-ad2xk7dc-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require
+      - SPRING_DATASOURCE_USERNAME=neondb_owner
+      - SPRING_DATASOURCE_PASSWORD=npg_VYbw2NX4SZPr
+      - SPRING_DATASOURCE_DRIVER=org.postgresql.Driver
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET}
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+    depends_on:
+      service-registry:
+        condition: service_healthy
+      # registration-db:
+      #   condition: service_healthy
+    networks:
+      - event-net
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ngrok-tunnel
+    restart: always
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    command:
+      - "http"
+      - "api-gateway:8080"
+    depends_on:
+      - api-gateway
+    networks:
+      - event-net
+
+networks:
+  event-net:
+    driver: bridge
+
+volumes:
+  auth-data:
+  event-data:
+  registration-data:
