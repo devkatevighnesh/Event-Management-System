@@ -1,0 +1,24 @@
+name: Test Environment Variables
+
+on:
+  push:
+    branches:
+      - main
+      - release
+  workflow_dispatch:
+
+jobs:
+  test-variables:
+    name: Test Environment Variables
+    runs-on: ubuntu-latest
+    
+    # Dynamically select 'production' environment for release branch, otherwise 'staging'
+    environment: ${{ github.ref_name == 'release' && 'production' || 'staging' }}
+    
+    steps:
+      - name: Check Branch and Environment
+        run: |
+          echo "Triggered branch: ${{ github.ref_name }}"
+          echo "Resolved Environment: ${{ github.ref_name == 'release' && 'production' || 'staging' }}"
+          echo "MWAA_BUCKET: ${{ vars.MWAA_BUCKET }}"
+          echo "MWAA_ENV_NAME: ${{ vars.MWAA_ENV_NAME }}"
