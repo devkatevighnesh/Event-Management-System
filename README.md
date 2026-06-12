@@ -110,3 +110,15 @@ All services dynamically generate OpenAPI definitions. You can view the full int
 - **Extensible Payments**: Supported modes: `RAZORPAY`, `MANUAL` (Mock).
 - **Ownership Validation**: Organizers manage only their own events.
 - **Cross-Service Validation**: Feign clients used for inter-service consistency.
+
+## Environment Testing Workflow
+- This repository is set up with multi-environment workflows.
+- Environment variables are dynamically fetched based on the branch.
+- Main branch uses the `staging` environment.
+- Release branch uses the `production` environment.
+- The `test-env.yml` workflow can be used to test variable resolution.
+- It prints branch name, resolved environment name, and MWAA variables.
+- It triggers automatically on push to `main` and `release` branches.
+- No actual deployments are run during the verification test.
+- This helps verify correct secrets/variables mapping.
+- Useful for validating dynamic environment selection.
